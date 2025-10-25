@@ -1037,6 +1037,16 @@ void FirstFrame(void)
 	RegisterCvar("_k_team3"); // internal mod usage
 	RegisterCvar("_k_host"); // internal mod usage
 
+	RegisterCvar(RPICK_TEAM_1_NAME);
+	RegisterCvar(RPICK_TEAM_1_TOPCOLOR);
+	RegisterCvar(RPICK_TEAM_1_BOTTOMCOLOR);
+	RegisterCvar(RPICK_TEAM_2_NAME);
+	RegisterCvar(RPICK_TEAM_2_TOPCOLOR);
+	RegisterCvar(RPICK_TEAM_2_BOTTOMCOLOR);
+	RegisterCvar(RPICK_TEAM_3_NAME);
+	RegisterCvar(RPICK_TEAM_3_TOPCOLOR);
+	RegisterCvar(RPICK_TEAM_3_BOTTOMCOLOR);
+
 // { lastscores support
 
 	RegisterCvar("__k_ls");  // current lastscore, really internal mod usage
