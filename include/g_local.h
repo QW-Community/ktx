@@ -777,10 +777,10 @@ typedef struct votemap_s
 
 typedef struct rpickupTeams_s
 {
-	char name[5];
+	char name[12];
 	char topColor[3];
 	char bottomColor[3];
-	char stuffCmd[30];
+	char stuffCmd[48];
 } rpickupTeams_t;
 
 typedef struct suggestcolor_s
@@ -1273,3 +1273,13 @@ void SpawnicideEnable(void);
 void SpawnicideDisable(void);
 
 qbool IsE1M2Practice(void);
+
+#define RPICK_TEAM_1_NAME 		"k_rpick_team_1_name"
+#define RPICK_TEAM_1_TOPCOLOR		"k_rpick_team_1_topcolor"
+#define RPICK_TEAM_1_BOTTOMCOLOR	"k_rpick_team_1_bottomcolor"
+#define RPICK_TEAM_2_NAME 		"k_rpick_team_2_name"
+#define RPICK_TEAM_2_TOPCOLOR		"k_rpick_team_2_topcolor"
+#define RPICK_TEAM_2_BOTTOMCOLOR	"k_rpick_team_2_bottomcolor"
+#define RPICK_TEAM_3_NAME 		"k_rpick_team_3_name"
+#define RPICK_TEAM_3_TOPCOLOR		"k_rpick_team_3_topcolor"
+#define RPICK_TEAM_3_BOTTOMCOLOR	"k_rpick_team_3_bottomcolor"
