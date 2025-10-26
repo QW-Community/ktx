@@ -22,26 +22,12 @@
 
 #define MAX_PLAYERCOUNT_RPICKUP 32
 
-// These are the built-in teams for rpickup to choose from
-// rpickupTeams_t builtinTeamInfo[] =
-// {
-// 	{"Bone", "10",  "0", "color 10 0\nskin \"\"\nteam Bone\n"},
-// 	{"Teal", "11", "11", "color 11 11\nskin \"\"\nteam Teal\n"},
-// 	{"Pink",  "6",  "6", "color 6 6\nskin \"\"\nteam Pink\n"},
-// 	{"Gold",  "5", "12", "color 5 12\nskin \"\"\nteam Gold\n"},
-// 	{"Plum",  "8",  "8", "color 8 8\nskin \"\"\nteam Plum\n"},
-// 	{"Wine",  "4",  "4", "color 4 4\nskin \"\"\nteam Wine\n"},
-// 	{"Beer",  "0",  "1", "color 0 1\nskin \"\"\nteam Beer\n"},
-// 	{"Weed",  "3",  "3", "color 3 3\nskin \"\"\nteam Weed\n"}
-// };
-
-// Let's just continue to use red/blue for now
-rpickupTeams_t builtinTeamInfo[] =
-{
-	{"red",  "4",  "4", "color 4 4\nskin \"\"\nteam red\n"},
-	{"blue",  "13",  "13", "color 13 13\nskin \"\"\nteam blue\n"},
-	{"yell",  "12",  "12", "color 12 12\nskin \"\"\nteam yell\n"}
-};
+static rpickupTeams_t builtinTeamInfo[3];
+static qbool rpickup_teams_initialized = false;
+static void rpickup_set_team(rpickupTeams_t *team,
+	char *name_cvar, char *top_cvar, char *bottom_cvar,
+	char *default_name, char *default_top, char *default_bottom);
+static void rpickup_init_teams(void);
 
 // Color suggestion
 suggestcolor_t suggestcolor;
@@ -773,6 +759,59 @@ void vote_check_pickup(void)
 	}
 }
 
+static void rpickup_set_team(rpickupTeams_t *team,
+	char *name_cvar, char *top_cvar, char *bottom_cvar,
+	char *default_name, char *default_top, char *default_bottom)
+{
+	char *name_str = cvar_string(name_cvar);
+	char *top_str = cvar_string(top_cvar);
+	char *bot_str = cvar_string(bottom_cvar);
+
+	if (!name_str || !*name_str)
+	{
+		name_str = default_name;
+	}
+
+	if (!top_str || !*top_str)
+	{
+		top_str = default_top;
+	}
+
+	if (!bot_str || !*bot_str)
+	{
+		bot_str = default_bottom;
+	}
+
+	snprintf(team->name, sizeof(team->name), "%s", name_str);
+	snprintf(team->topColor, sizeof(team->topColor), "%s", top_str);
+	snprintf(team->bottomColor, sizeof(team->bottomColor), "%s", bot_str);
+	snprintf(team->stuffCmd, sizeof(team->stuffCmd), "color %s %s\nskin \"\"\nteam %s\n",
+		top_str, bot_str, name_str);
+}
+
+static void rpickup_init_teams(void)
+{
+	if (rpickup_teams_initialized)
+	{
+		return;
+	}
+
+	rpickup_set_team(&builtinTeamInfo[0],
+		RPICK_TEAM_1_NAME, RPICK_TEAM_1_TOPCOLOR, RPICK_TEAM_1_BOTTOMCOLOR,
+		"red", "4", "4");
+
+	rpickup_set_team(&builtinTeamInfo[1],
+		RPICK_TEAM_2_NAME, RPICK_TEAM_2_TOPCOLOR, RPICK_TEAM_2_BOTTOMCOLOR,
+		"blue", "13", "13");
+
+	rpickup_set_team(&builtinTeamInfo[2],
+		RPICK_TEAM_3_NAME, RPICK_TEAM_3_TOPCOLOR, RPICK_TEAM_3_BOTTOMCOLOR,
+		"yell", "12", "12");
+
+	rpickup_teams_initialized = true;
+}
+
+
 // !!! do not confuse rpickup and pickup
 void vote_check_rpickup(int maxRecursion)
 {
@@ -781,6 +820,7 @@ void vote_check_rpickup(int maxRecursion)
 	gedict_t *p;
 	int veto;
 	qbool needNewRpickup = true;
+
 	// buffer reserved for 32 players (16on16). If more present, recursive auto-rpickup will not be activated
 	int originalTeams[MAX_PLAYERCOUNT_RPICKUP];
 
@@ -793,6 +833,8 @@ void vote_check_rpickup(int maxRecursion)
 	{
 		return;
 	}
+
+	rpickup_init_teams();
 
 	// Firstly obtain the number of players we have in total on server
 	pl_cnt = CountPlayers();
