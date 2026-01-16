@@ -367,10 +367,6 @@ void CA_MatchBreak(void)
 void track_player(gedict_t *observer)
 {
 	gedict_t *player = ca_get_player(observer);
-	vec3_t delta;
-	float vlen;
-	int follow_distance;
-	int upward_distance;
 
 	if (player && !observer->in_play && observer->tracking_enabled)
 	{
@@ -403,42 +399,6 @@ void track_player(gedict_t *observer)
 
 		// Lock observer's orientation to player POV
 		observer->s.v.movetype = MOVETYPE_LOCK;
-		
-		// Always update position manually for demo viewing
-		// The player's own view will use trackent which overrides this
-		follow_distance = -10;
-		upward_distance = 0;
-		
-		// Copy angles from tracked player
-		VectorCopy(player->s.v.v_angle, observer->s.v.v_angle);
-		VectorCopy(player->s.v.v_angle, observer->s.v.angles);
-
-		// Don't force immediate angle update - allow client interpolation for smoother demos
-		observer->s.v.fixangle = false;
-		
-		// Calculate observer position behind the tracked player
-		trap_makevectors(player->s.v.v_angle);
-		VectorMA(player->s.v.origin, follow_distance, g_globalvars.v_forward, observer->s.v.origin);
-		VectorMA(observer->s.v.origin, upward_distance, g_globalvars.v_up, observer->s.v.origin);
-		
-		// Avoid positioning in walls
-		traceline(PASSVEC3(player->s.v.origin), PASSVEC3(observer->s.v.origin), false, player);
-		VectorCopy(g_globalvars.trace_endpos, observer->s.v.origin);
-		
-		if (g_globalvars.trace_fraction == 1)
-		{
-			VectorCopy(g_globalvars.trace_endpos, observer->s.v.origin);
-			VectorMA(observer->s.v.origin, 10, g_globalvars.v_forward, observer->s.v.origin);
-		}
-		else
-		{
-			VectorSubtract(g_globalvars.trace_endpos, player->s.v.origin, delta);
-			vlen = VectorLength(delta);
-			vlen = vlen - 40;
-			VectorNormalize(delta);
-			VectorScale(delta, vlen, delta);
-			VectorAdd(player->s.v.origin, delta, observer->s.v.origin);
-		}
 
 		// set observer's health/armor/ammo/weapon to match the player's
 		observer->s.v.ammo_nails = player->s.v.ammo_nails;
@@ -661,9 +621,6 @@ void CA_PutClientInServer(void)
 		self->spawn_delay = 0;
 
 		setmodel(self, "");
-
-		// Relink after changing solid to ensure correct area list placement
-		setorigin(self, PASSVEC3(self->s.v.origin));
 
 		if (!self->in_limbo || ca_round_pause)
 		{

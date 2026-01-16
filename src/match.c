@@ -980,7 +980,6 @@ static void SM_PrepareClients(void)
 
 	for (p = world; (p = find_plr(p));)
 	{
-		players[player_count++] = p;
 		p->socdDetectionCount = 0;
 		p->socdValidationCount = 0;
 		p->fStrafeChangeCount = 0;
@@ -991,19 +990,11 @@ static void SM_PrepareClients(void)
 		p->totalStrafeChangeCount = 0;
 		p->totalPerfectStrafeCount = 0;
 		p->nullStrafeCount = 0;
+	}
 
-		// reset leavemealone before match
-        if (p->leavemealone)
-        {
-            p->leavemealone = false;
-
-            // If they were a trigger, restore normal solidity and relink
-            if (p->s.v.solid == SOLID_TRIGGER)
-            {
-                p->s.v.solid = SOLID_SLIDEBOX;
-                setorigin(p, PASSVEC3(p->s.v.origin));
-            }
-        }
+	for (p = world; (p = find_plr(p));)
+	{
+		players[player_count++] = p;
 	}
 
 	for (i = player_count - 1; i > 0; i--)
@@ -1313,6 +1304,11 @@ void StartMatch(void)
 	remove_specs_wizards(); // remove wizards
 
 	SM_PrepareClients(); // put clients in server and reset some params
+
+	if ((int)cvar("k_prewar") == 3)
+	{
+		refresh_plus_scores();
+	}
 
 	for (p = world; (p = find_client(p));)
 	{
@@ -2080,9 +2076,6 @@ void standby_think(void)
                 p->s.v.movetype = 0;
                 p->s.v.modelindex = 0;
                 p->model = "";
-				
-                // Relink after solid change to keep area lists consistent
-                setorigin(p, PASSVEC3(p->s.v.origin));
 			}
 		}
 	}
@@ -2616,9 +2609,6 @@ void StopTimer(int removeDemo)
             p->s.v.solid = SOLID_SLIDEBOX;
             p->s.v.movetype = MOVETYPE_WALK;
             setmodel(p, "progs/player.mdl");
-
-            // Relink after solid change so players are returned to the correct list
-            setorigin(p, PASSVEC3(p->s.v.origin));
 		}
 	}
 

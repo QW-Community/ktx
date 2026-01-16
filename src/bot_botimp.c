@@ -269,7 +269,8 @@ qbool SetAttributesBasedOnSkill(int skill)
 	{
 		G_bprint(2, "%s\n", redtext("Using easy bot skill mode"));
 		setSkillAttributesEasySkillMode(skill, aimskill);
-	} else
+	}
+	else
 	{
 		G_bprint(2, "%s\n", redtext("Using default bot skill mode"));
 		setSkillAttributes(skill, aimskill);

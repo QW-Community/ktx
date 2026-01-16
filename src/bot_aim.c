@@ -104,8 +104,6 @@ static qbool PredictEnemyLocationInFuture(gedict_t *enemy, float rel_time)
 	qbool predicted = false;
 
 	enemy->s.v.solid = SOLID_NOT;
-	// Relink after solid change so prediction traces ignore enemy collisions consistently
-    setorigin(enemy, PASSVEC3(enemy->s.v.origin));
 
 	VectorMA(enemy->s.v.origin, rel_time, enemy->s.v.velocity, testplace);
 	testplace[2] += 36;
@@ -130,8 +128,6 @@ static qbool PredictEnemyLocationInFuture(gedict_t *enemy, float rel_time)
 	}
 
 	enemy->s.v.solid = old_solid;
-	// Relink after restoring solidity
-    setorigin(enemy, PASSVEC3(enemy->s.v.origin));
 
 	return predicted;
 }
