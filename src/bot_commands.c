@@ -2281,6 +2281,12 @@ static void FrogbotsSetItemPickupBonus(void)
 		return;
 	}
 
+	if (!tot_mode_enabled())
+	{
+		G_sprint(self, 2, "This is option is only available in ToT mode.\n");
+		return;
+	}
+
 	cvar_fset(FB_CVAR_ITEM_PICKUP_BONUS, !cvar(FB_CVAR_ITEM_PICKUP_BONUS));
 	G_sprint(self, 2, "item pickup bonus changed to %s\n",
 		(int)cvar(FB_CVAR_ITEM_PICKUP_BONUS) ? redtext("on") : redtext("off"));
@@ -2725,8 +2731,6 @@ void BotStartFrame(void)
 					{
 						p->fb.oldsolid = p->s.v.solid;
 						p->s.v.solid = SOLID_NOT;
-						// Relink after solid change to avoid stale area list state
-						setorigin(p, PASSVEC3(p->s.v.origin));
 					}
 
 					AvoidHazards(self);
@@ -2735,8 +2739,6 @@ void BotStartFrame(void)
 					for (p = world; (p = find_plr(p));)
 					{
 						p->s.v.solid = p->fb.oldsolid;
-						// Relink after restoring solidity
-						setorigin(p, PASSVEC3(p->s.v.origin));
 					}
 				}
 

@@ -790,22 +790,60 @@ void PlayersStopFire(void)
 	}
 }
 
+static void PlayersApplyPrewarLoadout(void)
+{
+	gedict_t *p;
+
+	if (isRA())
+	{
+		return;
+	}
+
+	for (p = world; (p = find_plr(p));)
+	{
+		if (p && (p->ct == ctPlayer) && ISLIVE(p))
+		{
+			p->s.v.health = 100;
+			p->s.v.max_health = max(p->s.v.max_health, p->s.v.health);
+			p->s.v.armortype = 0.8;
+			p->s.v.armorvalue = 200;
+			p->s.v.items = (((int)p->s.v.items) & ~(IT_ARMOR1 | IT_ARMOR2 | IT_ARMOR3)) | IT_ARMOR3;
+		}
+	}
+}
+
 void TogglePreWar(void)
 {
-	int k_prewar = bound(0, cvar("k_prewar"), 2);
+	int k_prewar = bound(0, cvar("k_prewar"), 3);
 
 	if (!is_adm(self))
 	{
 		return;
 	}
 
-	if (++k_prewar > 2)
+	if (++k_prewar > 3)
 	{
 		k_prewar = 0;
 	}
 
 	switch (k_prewar)
 	{
+		case 3:
+			if (match_in_progress != 2)
+			{
+				PlayersApplyPrewarLoadout();
+			}
+
+			if (!match_in_progress)
+			{
+				G_bprint(2, "Players may %s before match\n", redtext("damage and frag"));
+			}
+			else
+			{
+				G_sprint(self, 2, "Players may %s before match\n", redtext("damage and frag"));
+			}
+			break;
+
 		case 1:
 			if (!match_in_progress)
 			{

@@ -986,8 +986,6 @@ typedef struct gedict_s
 	float fIllegalFPSWarnings;
 // ILLEGALFPS]
 
-	qbool leavemealone;						// if player doesn't want to be shot by other players during pre war
-
 // SOCD detectioin
 	float fStrafeChangeCount;
 	float fFramePerfectStrafeChangeCount;
@@ -1252,8 +1250,8 @@ typedef struct gedict_s
 
 // {
 	// let mvdsv know when player has teleported, and adjust for high-ping
-	int          teleported;
-	float		 teleport_time;
+	int teleported;
+	float teleport_time;
 // }
 
 // {
