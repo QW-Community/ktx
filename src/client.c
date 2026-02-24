@@ -398,7 +398,7 @@ void SetChangeParms(void)
 	g_globalvars.parm12 = self->k_coach;
 	g_globalvars.parm13 = self->k_stuff;
 	g_globalvars.parm14 = self->ps.handicap;
-	g_globalvars.parm15 = self->ready;
+	g_globalvars.parm15 = ((match_in_progress == 2) || cvar("k_matchless")) ? self->ready : 0;
 }
 
 //

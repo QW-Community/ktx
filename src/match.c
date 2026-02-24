@@ -3130,7 +3130,7 @@ void PlayerBreak(void)
 		{
 			p = find(world, FOFCLSN, "timer");
 
-			if (p && p->cnt2 > 1)
+			if (p && p->cnt2 >= 1)
 			{
 				self->ready = 0;
 
