@@ -129,7 +129,11 @@ field_t fields[] =
 	{ "noise2",						FOFS(noise2), 						F_LSTRING },
 	{ "noise3",						FOFS(noise3), 						F_LSTRING },
 	{ "noise4",						FOFS(noise4), 						F_LSTRING },
-	{ "deathtype",					FOFS(deathtype), 					F_LSTRING },
+
+ // KTX use deathtype as a damage type for earch T_Damage and T_RadiusDamage call.
+ // Vanila QC code uses it as a custom death message type for doors/plats/etc, but we broke it.
+	{ "deathtype",					0, 									F_IGNORE },
+
 	{ "t_length",					FOFS(t_length), 					F_FLOAT },
 	{ "t_width",					FOFS(t_width), 						F_FLOAT },
 // TF

@@ -4,6 +4,21 @@
 
 #include "g_local.h"
 
+typedef struct ca_player_stats_t
+{
+	float dmg;		// damage given
+	float dmgt;		// damage taken
+	float frags;		// frags
+	float kil;		// kills
+	float dths;		// deaths
+	float gl_h;		// gl hits
+	float rl_h;		// rl hits
+	float rl_d;		// rl directs
+	float lg_h;		// lg hits
+	float lg_a;		// lg attacks
+	float lg_e;		// lg efficiency
+} ca_player_stats_t;
+
 typedef struct wipeout_spawn_config_t
 {
 	vec3_t origin;          // spawn point coordinates
@@ -24,13 +39,14 @@ typedef struct wipeout_map_spawns_t
 // { {coords}, angle, name, radius }
 static wipeout_spawn_config dm3_spawns[] = {
 	{ { -880, -232, -16 },	90,		"tele/sng",	400 },
-	{ { 192, -208, -176 },	90,		"big>ra",	300 },
+	{ { 192, -208, -176 },	90,		"ra/mega",	300 },
 	{ { 1472, -928, -24 },	90,		"ya box",	200 },
 	{ { 1520, 432, -88 },	0,		"rl",		400 },
 	{ { -632, -680, -16 },	90,		"tele/ra",	400 },
 	{ { 512, 768, 216 }, 	-90,	"lifts",	300 },
 	{ { -387, 233, -16 }, 	0,		"sng",		200 },
-	{ { 2021, -446, -24 }, 	180,	"bridge",	400 }
+	{ { 1959, -449, -24 }, 	180,	"bridge",	1000 },
+	{ { 1846, 690, -180 }, 180,		"pent",		2000 }
 };
 
 static wipeout_map_spawns wipeout_spawn_configs[] = {
@@ -48,6 +64,15 @@ static int loser_team;
 static qbool do_endround_stuff = false;
 static qbool print_stats = false;
 static float loser_respawn_time = 999; 	// number of seconds before a teammate would've respawned
+static float best_dmgt;
+static float best_dmg;
+static float best_score;
+static float best_kills;
+static float best_deaths;
+static float best_gl_hits;
+static float best_rl_hits;
+static float best_rl_directs;
+static float best_lg_eff;
 
 void track_player(gedict_t *observer);
 void enable_player_tracking(gedict_t *e, int follow);
@@ -280,6 +305,19 @@ void SM_PrepareCA(void)
 			p->ca_ready = p->ready;
 			p->seconds_to_respawn = 0;
 			p->teamcolor = NULL;
+
+			// must reset stats before new game starts
+			p->ca_round_frags = 0;
+			p->ca_round_kills = 0;
+			p->ca_round_dmg = 0;
+			p->ca_round_dmgt = 0;
+			p->ca_round_deaths = 0;
+			p->ca_round_glhit = 0;
+			p->ca_round_glfired = 0;
+			p->ca_round_rlhit = 0;
+			p->ca_round_rldirect = 0;
+			p->ca_round_lghit = 0;
+			p->ca_round_lgfired = 0;
 		}
 	}
 }
@@ -740,11 +778,6 @@ void CA_SendTeamInfo(gedict_t *t)
 			break;
 		}
 
-		if (t->ct == ctSpec && t->trackent && (t->trackent == NUM_FOR_EDICT(p)))
-		{
-			continue; // if we're spectating the player, don't send info about him
-		}
-
 		if (p->ca_ready || match_in_progress != 2) // be sure to send info if in prewar
 		{
 			if (match_in_progress == 2)
@@ -1086,9 +1119,72 @@ void team_round_summary(int alive_team)
 		!alive_team ? "tied round" : (alive_team == 2 ? "round winner" : ""));
 }
 
+static void CA_GetPlayerStats(gedict_t *p, qbool series_over, ca_player_stats_t *stats)
+{
+	qbool use_totals = (round_num == 1 || series_over);
+
+	if (use_totals)
+	{
+		stats->frags = p->s.v.frags;
+		stats->dmg = p->ps.dmg_g;
+		stats->dmgt = p->ps.dmg_t;
+		stats->kil = stats->frags - ((int)(stats->dmg / 100.0));
+		stats->dths = p->deaths;
+		stats->gl_h = p->ps.wpn[wpGL].vhits;
+		stats->rl_h = p->ps.wpn[wpRL].vhits;
+		stats->rl_d = p->ps.wpn[wpRL].hits;
+		stats->lg_h = p->ps.wpn[wpLG].hits;
+		stats->lg_a = p->ps.wpn[wpLG].attacks;
+		stats->lg_e = 100.0 * stats->lg_h / max(1, stats->lg_a);
+	}
+	else
+	{
+		stats->frags = p->s.v.frags - p->ca_round_frags;
+		stats->dmg = p->ps.dmg_g - p->ca_round_dmg;
+		stats->dmgt = p->ps.dmg_t - p->ca_round_dmgt;
+		stats->kil = stats->frags - ((int)(stats->dmg / 100.0));
+		stats->dths = p->deaths - p->ca_round_deaths;
+		stats->gl_h = p->ps.wpn[wpGL].vhits - p->ca_round_glhit;
+		stats->rl_h = p->ps.wpn[wpRL].vhits - p->ca_round_rlhit;
+		stats->rl_d = p->ps.wpn[wpRL].hits - p->ca_round_rldirect;
+		stats->lg_h = p->ps.wpn[wpLG].hits - p->ca_round_lghit;
+		stats->lg_a = p->ps.wpn[wpLG].attacks - p->ca_round_lgfired;
+		stats->lg_e = 100.0 * stats->lg_h / max(1, stats->lg_a);
+	}
+}
+
+static void CA_UpdateBestStats(gedict_t *p, qbool series_over)
+{
+	ca_player_stats_t stats;
+
+	CA_GetPlayerStats(p, series_over, &stats);
+
+	best_score = stats.frags > best_score ? stats.frags : best_score;
+	best_dmg = stats.dmg > best_dmg ? stats.dmg : best_dmg;
+	best_dmgt = stats.dmgt < best_dmgt ? stats.dmgt : best_dmgt;
+	best_kills = stats.kil > best_kills ? stats.kil : best_kills;
+	best_deaths = stats.dths < best_deaths ? stats.dths : best_deaths;
+	best_gl_hits = stats.gl_h > best_gl_hits ? stats.gl_h : best_gl_hits;
+	best_rl_hits = stats.rl_h > best_rl_hits ? stats.rl_h : best_rl_hits;
+	best_rl_directs = stats.rl_d > best_rl_directs ? stats.rl_d : best_rl_directs;
+	best_lg_eff = stats.lg_e > best_lg_eff ? stats.lg_e : best_lg_eff;
+}
+
 void print_player_stats(qbool series_over)
 {
 	gedict_t *p;
+
+	// reset top stats before looping players
+	// some values set to 1 to avoid displaying 0s as top stats
+	best_dmgt = 999999.0f;
+	best_dmg = 0;
+	best_score = 0;
+	best_kills = 0;
+	best_deaths = 999999.0f;
+	best_gl_hits = 1;
+	best_rl_hits = 1;
+	best_rl_directs = 1;
+	best_lg_eff = 1;
 
 	G_bprint(2,
 		"\nsco  damg took  k  d  gl  rh  rd  lg%% player\n%s\n",
@@ -1100,6 +1196,16 @@ void print_player_stats(qbool series_over)
 				(streq(getteam(p), cvar_string(va("_k_team1"))) || 
 				streq(getteam(p), cvar_string(va("_k_team2"))) ))
 		{
+			CA_UpdateBestStats(p, series_over);
+		}
+	}
+
+	for (p = world; (p = find_plr(p));)
+	{
+		if (p->ready &&
+				(streq(getteam(p), cvar_string(va("_k_team1"))) ||
+				streq(getteam(p), cvar_string(va("_k_team2"))) ))
+		{
 			CA_OnePlayerStats(p, series_over);
 		}
 	}
@@ -1109,54 +1215,39 @@ void print_player_stats(qbool series_over)
 
 void CA_OnePlayerStats(gedict_t *p, qbool series_over)
 {
-	qbool use_totals = (round_num == 1 || series_over);
-	float frags;
-	float rkills;
-	float dmg_g;
-	float dmg_t;
-	float vh_rl;
-	float h_rl;
-	float vh_gl;
-	float h_lg;
-	float a_lg;
-	float e_lg;
-	float round_elg;
-	char score[10];
-	char damage[10];
-	char dmg_took[10];
-	char kills[10];
-	char deaths[10];
-	char gl_hits[10];
-	char rl_hits[10];
-	char rl_directs[10];
-	char lg_eff[10];
+	ca_player_stats_t stats;
+	char score[20];
+	char damage[20];
+	char dmg_took[20];
+	char kills[20];
+	char deaths[20];
+	char gl_hits[20];
+	char rl_hits[20];
+	char rl_directs[20];
+	char lg_eff[20];
 
-	frags = p->s.v.frags;
-	dmg_g = p->ps.dmg_g;
-	dmg_t = p->ps.dmg_t;
+	CA_GetPlayerStats(p, series_over, &stats);
 
-	rkills = frags - ((int)(dmg_g/100.0));
-	h_rl = p->ps.wpn[wpRL].hits;
-	vh_rl = p->ps.wpn[wpRL].vhits;
-	vh_gl = p->ps.wpn[wpGL].vhits;
-	h_lg = p->ps.wpn[wpLG].hits;
-	a_lg = p->ps.wpn[wpLG].attacks;
-	e_lg = 100.0 * h_lg / max(1, a_lg);
+	// debug RL directs (only meaningful for per-round deltas)
+	// if (!series_over && (stats.rl_d > 10 || stats.rl_d < 0 || p->ps.wpn[wpRL].hits < p->ca_round_rldirect))
+	// {
+	// 	G_bprint(2, "CA stats anomaly: %s round=%d rl_hits=%d rl_base=%.0f rl_delta=%.0f\n",
+	// 		getname(p), round_num, p->ps.wpn[wpRL].hits, p->ca_round_rldirect, stats.rl_d);
+	// }
 
-	if (!use_totals)
-	{
-		round_elg = 100 * (h_lg - p->ca_round_lghit) / max(1, a_lg - p->ca_round_lgfired);
-	}
+	snprintf(score, 	 sizeof(score), 	"%s", stats.frags == best_score 	? dig3(Q_rint(stats.frags)) : dig1s("%.0f", stats.frags));
+	snprintf(damage, 	 sizeof(damage), 	"%s", stats.dmg == best_dmg 		? dig3(Q_rint(stats.dmg))  	: dig1s("%.0f", stats.dmg));
+	snprintf(dmg_took, 	 sizeof(dmg_took), 	"%s", stats.dmgt == best_dmgt 		? dig3(Q_rint(stats.dmgt))  : dig1s("%.0f", stats.dmgt));
+	snprintf(kills, 	 sizeof(kills), 	"%s", stats.kil == best_kills 		? dig3(Q_rint(stats.kil))   : dig1s("%.0f", stats.kil));
+	snprintf(deaths, 	 sizeof(deaths), 	"%s", stats.dths == best_deaths 	? dig3(Q_rint(stats.dths))  : dig1s("%.0f", stats.dths));
+	snprintf(gl_hits, 	 sizeof(gl_hits), 	"%s", stats.gl_h == best_gl_hits 	? dig3(Q_rint(stats.gl_h))  : dig1s("%.0f", stats.gl_h));
+	snprintf(rl_hits, 	 sizeof(rl_hits), 	"%s", stats.rl_h == best_rl_hits 	? dig3(Q_rint(stats.rl_h))  : dig1s("%.0f", stats.rl_h));
+	snprintf(rl_directs, sizeof(rl_directs),"%s", stats.rl_d == best_rl_directs ? dig3(Q_rint(stats.rl_d))  : dig1s("%.0f", stats.rl_d));
+	snprintf(lg_eff, 	 sizeof(lg_eff), 	"%s", stats.lg_e == best_lg_eff 	? dig3(Q_rint(stats.lg_e))  : dig1s("%.0f", stats.lg_e));
 
-	snprintf(score, sizeof(score), "%.0f", use_totals ? p->s.v.frags : p->s.v.frags - p->ca_round_frags);
-	snprintf(damage, sizeof(damage), "%.0f", use_totals ? dmg_g : dmg_g - p->ca_round_dmg);
-	snprintf(dmg_took, sizeof(dmg_took), "%.0f", use_totals ? dmg_t : dmg_t - p->ca_round_dmgt);
-	snprintf(kills, sizeof(kills), "%.0f", use_totals ? rkills : rkills - p->ca_round_kills);
-	snprintf(deaths, sizeof(deaths), "%.0f", use_totals ? p->deaths : p->deaths - p->ca_round_deaths);
-	snprintf(gl_hits, sizeof(gl_hits), "%.0f", use_totals ? vh_gl : vh_gl - p->ca_round_glhit);
-	snprintf(rl_hits, sizeof(rl_hits), "%.0f", use_totals ? vh_rl : vh_rl - p->ca_round_rlhit);
-	snprintf(rl_directs, sizeof(rl_directs), "%.0f", use_totals ? h_rl : h_rl - p->ca_round_rldirect);
-	snprintf(lg_eff, sizeof(lg_eff), "%.0f", use_totals ? e_lg : round_elg);
+	// debug stats row
+	// G_cprint("CA stats row: %s frags=%.0f dmg=%.0f dmgt=%.0f kills=%.0f deaths=%.0f gl=%.0f rl=%.0f rd=%.0f lg=%.0f\n",
+	// 	getname(p), stats.frags, stats.dmg, stats.dmgt, stats.kil, stats.dths, stats.gl_h, stats.rl_h, stats.rl_d, stats.lg_e);
 
 	G_bprint(2, "%3s %5s %4s %2s %2s %3s %3s %3s %3s%s %s\n",
 		strneq(score,      "0") ? score        : "-",
@@ -1172,15 +1263,30 @@ void CA_OnePlayerStats(gedict_t *p, qbool series_over)
 		getname(p));
 
 	p->ca_round_frags = p->s.v.frags;
-	p->ca_round_kills = rkills;
-	p->ca_round_dmg = dmg_g;
-	p->ca_round_dmgt = dmg_t;
+	p->ca_round_kills = p->s.v.frags - ((int)(p->ps.dmg_g/100.0));
+	p->ca_round_dmg = p->ps.dmg_g;
+	p->ca_round_dmgt = p->ps.dmg_t;
 	p->ca_round_deaths = p->deaths;
-	p->ca_round_glhit = vh_gl;
-	p->ca_round_rlhit = vh_rl;
-	p->ca_round_rldirect = h_rl;
-	p->ca_round_lghit = h_lg;
-	p->ca_round_lgfired = a_lg;
+	p->ca_round_glhit = p->ps.wpn[wpGL].vhits;
+	p->ca_round_rlhit = p->ps.wpn[wpRL].vhits;
+	p->ca_round_rldirect = p->ps.wpn[wpRL].hits;
+	p->ca_round_lghit = p->ps.wpn[wpLG].hits;
+	p->ca_round_lgfired = p->ps.wpn[wpLG].attacks;
+}
+
+void UnlimitedEndRoundAmmo(void)
+{
+	gedict_t *p;
+	int ammo = 9999;
+
+	for (p = world; (p = find_plr(p));)
+	{
+		p->s.v.ammo_nails = ammo;
+		p->s.v.ammo_shells = ammo;
+		p->s.v.ammo_rockets = ammo;
+		p->s.v.ammo_cells = ammo;
+		p->ca_ammo_grenades = ammo;
+	}
 }
 
 void EndRound(int alive_team)
@@ -1197,6 +1303,8 @@ void EndRound(int alive_team)
 		loser_team = alive_team ? (alive_team == 1 ? 2 : 1) : 0;
 		loser_respawn_time = loser_team ? team_last_alive_time(loser_team) : 999;
 	}
+
+	UnlimitedEndRoundAmmo(); // Surviving players get unlimited ammo during endround phase
 
 	pause_count = Q_rint(pause_time - g_globalvars.time);
 
@@ -1318,11 +1426,6 @@ void EndRound(int alive_team)
 
 			print_player_stats(false);
 			team_round_summary(alive_team);
-		}
-
-		if (pause_count < 4)
-		{
-			ra_match_fight = 1; // disable firing
 		}
 	}
 }

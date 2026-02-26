@@ -398,7 +398,7 @@ void SetChangeParms(void)
 	g_globalvars.parm12 = self->k_coach;
 	g_globalvars.parm13 = self->k_stuff;
 	g_globalvars.parm14 = self->ps.handicap;
-	g_globalvars.parm15 = self->ready;
+	g_globalvars.parm15 = ((match_in_progress == 2) || cvar("k_matchless")) ? self->ready : 0;
 }
 
 //
@@ -4706,6 +4706,8 @@ void PlayerPostThink(void)
 	else if (!readytostart())
 		self->client_predflags = PRDFL_FORCEOFF;
 	else if (!CA_can_fire(self))
+		self->client_predflags = PRDFL_FORCEOFF;
+	else if ((cvar("k_clan_arena") == 2) && ca_round_pause && self->in_play)
 		self->client_predflags = PRDFL_FORCEOFF;
 	else if ((match_in_progress == 1) || !can_prewar(true))
 		self->client_predflags = PRDFL_FORCEOFF;

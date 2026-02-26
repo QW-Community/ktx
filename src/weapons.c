@@ -1839,6 +1839,13 @@ void superspike_touch(void)
 	}
 	else
 	{
+		// no ricochet or sparks in wipeout endround phase
+		if (cvar("k_clan_arena") == 2 && ca_round_pause)
+		{
+			ent_remove(self);
+			return;
+		}
+
 		WriteByte( MSG_MULTICAST, SVC_TEMPENTITY);
 		WriteByte( MSG_MULTICAST, TE_SUPERSPIKE);
 		WriteCoord( MSG_MULTICAST, self->s.v.origin[0]);
@@ -1853,12 +1860,13 @@ void superspike_touch(void)
 void W_FireSuperSpikes(void)
 {
 	vec3_t dir, tmp;
+	qbool wipe_spike = (cvar("k_clan_arena") == 2) && ca_round_pause && self->in_play;
 
 	WS_Mark(self, wpSNG);
 
 	self->ps.wpn[wpSNG].attacks++;
 
-	sound(self, CHAN_WEAPON, "weapons/spike2.wav", 1, ATTN_NORM);
+	sound(self, CHAN_WEAPON, wipe_spike ? "misc/water1.wav" : "weapons/spike2.wav", 1, ATTN_NORM);
 	self->attack_finished = self->client_time + 0.2;
 
 	if (match_in_progress == 2)
@@ -1876,7 +1884,15 @@ void W_FireSuperSpikes(void)
 	tmp[2] += 16;
 	launch_spike(tmp, dir);
 	newmis->touch = (func_t) superspike_touch;
-	setmodel(newmis, "progs/s_spike.mdl");
+	if (wipe_spike)
+	{
+		// Wipeout end-round flair for survivor SNG shots.
+		setmodel(newmis, "progs/s_bubble.spr");
+	}
+	else
+	{
+		setmodel(newmis, "progs/s_spike.mdl");
+	}
 	setsize(newmis, 0, 0, 0, 0, 0, 0);
 	g_globalvars.msg_entity = EDICT_TO_PROG(self);
 	WriteByte( MSG_ONE, SVC_SMALLKICK);
