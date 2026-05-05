@@ -133,3 +133,13 @@ void SetSendNeeded(gedict_t *ed, int sendflags, int unicast)
 	}
 	trap_SetSendNeeded(NUM_FOR_EDICT(ed), sendflags, unicast);
 }
+
+void SetLastRuntime(gedict_t *ed)
+{
+	if (!HAVEEXTENSION(G_SETLASTRUNTIME))
+	{
+		G_bprint(PRINT_HIGH, "SetLastRuntime needs support in server\n");
+		return;
+	}
+	trap_SetLastRuntime(NUM_FOR_EDICT(ed));
+}

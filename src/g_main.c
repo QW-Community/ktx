@@ -658,6 +658,7 @@ static qbool G_InitExtensions(void)
 		{"SetExtField",			G_SETEXTFIELD},
 		{"GetExtField",			G_GETEXTFIELD},
 		{"setsendneeded",		G_SETSENDNEEDED},
+		{"SetLastRuntime",		G_SETLASTRUNTIME},
 		#ifdef FTESV
 		{"ChangeLevelHub",		G_CHANGELEVEL_HUB},
 		{"URI_Query",			G_URI_QUERY},

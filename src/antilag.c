@@ -640,6 +640,7 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 
 			self = oself;
 			antilag_unmove_all(); // emergency antilag cleanup
+			SetLastRuntime(e);
 			return;
 		}
 	}
@@ -680,6 +681,7 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 
 	// restore origins to held values
 	antilag_unmove_all();
+	SetLastRuntime(e);
 	time_corrected = g_globalvars.time;
 }
 
