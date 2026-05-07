@@ -237,3 +237,18 @@ add_custom_target(qvm
 	COMMAND ${QVM_LINKER} -m -f ${QVM_LIST_FILE}
 	DEPENDS ${SRC_ASM}
 )
+
+# Antilag unit tests (standalone executable with stub headers).
+add_executable(test_antilag
+	tests/test_antilag.c
+	${DIR_SRC}/antilag.c
+)
+target_include_directories(test_antilag PRIVATE tests/include include)
+if (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+	target_compile_options(test_antilag PRIVATE /W4 /wd4100 /wd4210 /wd4456 /wd4459)
+else()
+	target_compile_options(test_antilag PRIVATE -Wall -std=gnu17)
+	target_link_libraries(test_antilag PRIVATE m)
+endif()
+enable_testing()
+add_test(NAME antilag COMMAND test_antilag)

@@ -575,11 +575,22 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 	if (cvar("sv_antilag") != 1)
 		return;
 
-	ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+	// Subtract one frametime (capped at 1/77 s) from the rewind window —
+	// the goal is to simulate a standard 13ms connnection, not eliminate lag entirely
+	float frametime = g_globalvars.frametime > 0 ? g_globalvars.frametime : (1 / 77.0f);
+	float ft_used = max(frametime, 1 / 77.0f);
+	ms -= ft_used;
+	G_bprint(PRINT_HIGH, "[antilag-proj] ping_ms=%.1f frametime=%.4f ft_used=%.4f ms_rewind=%.4f\n",
+		atof(ezinfokey(owner, "ping")), frametime, ft_used, ms);
 
 	if (ms > ANTILAG_REWIND_MAXPROJECTILE)
 		ms = ANTILAG_REWIND_MAXPROJECTILE;
 	else if (ms < 0)
+		ms = 0;
+
+	// Sub-millisecond ping is indistinguishable from 0 — treat it as such
+	// so the while-loop below has no remaining time to step through.
+	if (ms < 0.001)
 		ms = 0;
 
 	e->client_time = ms;
@@ -616,12 +627,10 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 
 	oself = self;
 
-	step_time = min(cvar("sv_mintic"), ms);
+	// Cap step size to sv_mintic, and further limit to avoid tunnelling.
+	step_time = cvar("sv_mintic");
 	if (step_time * VectorLength(e->s.v.velocity) > 3)
-	{
-		// step size * velocity can't be more than player hitbox width, we don't want any shenanigans
 		step_time = 8 / VectorLength(e->s.v.velocity);
-	}
 
 	current_time = g_globalvars.time - ms;
 	// newmis reimplementation
@@ -644,38 +653,36 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 			return;
 		}
 	}
-	//
 
-	// actual stepping through
-	while (current_time <= g_globalvars.time)
+	// Step through the rewind window in sv_mintic increments. The final step
+	// may be smaller than sv_mintic to land exactly on g_globalvars.time.
+	while (current_time < g_globalvars.time)
 	{
+		float remaining = g_globalvars.time - current_time;
+		float dt = min(step_time, remaining);
 		time_corrected = current_time;
-		step_time = bound(0.01, min(step_time, (g_globalvars.time - current_time) - 0.01), 0.05);
-		if (e->s.v.nextthink) { e->s.v.nextthink -= step_time; }
+		if (e->s.v.nextthink) { e->s.v.nextthink -= dt; }
 
-		//antilag_lagmove_all_nohold(owner, (g_globalvars.time - current_time), false);
-		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
-		traceline(PASSVEC3(e->s.v.origin), e->s.v.origin[0] + e->s.v.velocity[0] * step_time,
-			e->s.v.origin[1] + e->s.v.velocity[1] * step_time, e->s.v.origin[2] + e->s.v.velocity[2] * step_time,
+		antilag_lagmove_all_playeronly(owner, remaining);
+		traceline(PASSVEC3(e->s.v.origin),
+			e->s.v.origin[0] + e->s.v.velocity[0] * dt,
+			e->s.v.origin[1] + e->s.v.velocity[1] * dt,
+			e->s.v.origin[2] + e->s.v.velocity[2] * dt,
 			false, e);
 
 		trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(g_globalvars.trace_endpos));
 
 		if (g_globalvars.trace_fraction < 1 || g_globalvars.trace_startsolid)
 		{
-			//if (g_globalvars.trace_ent)
-			//{
 			other = PROG_TO_EDICT(g_globalvars.trace_ent);
 			self = e;
 			self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
 			((void(*)(void))(self->touch))();
 			break;
-			//}
 		}
 
-		current_time += step_time;
+		current_time += dt;
 	}
-	//
 
 	self = oself;
 
@@ -697,11 +704,18 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	if (cvar("sv_antilag") != 1)
 		return;
 
-	ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+	float frametime = g_globalvars.frametime > 0 ? g_globalvars.frametime : (1 / 77.0f);
+	float ft_used = max(frametime, 1 / 77.0f);
+	ms -= ft_used;
+	G_bprint(PRINT_HIGH, "[antilag-proj-bounce] ping_ms=%.1f frametime=%.4f ft_used=%.4f ms_rewind=%.4f\n",
+		atof(ezinfokey(owner, "ping")), frametime, ft_used, ms);
 
 	if (ms > ANTILAG_REWIND_MAXPROJECTILE)
 		ms = ANTILAG_REWIND_MAXPROJECTILE;
 	else if (ms < 0)
+		ms = 0;
+
+	if (ms < 0.001)
 		ms = 0;
 
 	e->client_time = ms;
@@ -737,12 +751,9 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	oself = self;
 	self = e;
 
-	step_time = min(cvar("sv_mintic"), ms);
+	step_time = cvar("sv_mintic");
 	if (step_time * VectorLength(e->s.v.velocity) > 32)
-	{
-		// step size * velocity can't be more than player hitbox width, we don't want any shenanigans
 		step_time = 32 / VectorLength(e->s.v.velocity);
-	}
 
 	current_time = g_globalvars.time - ms;
 	// newmis reimplementation
@@ -751,29 +762,26 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
 		Physics_Bounce(0.05);
 	}
-	//
 
-	// actual step through
+	// Step through the rewind window in sv_mintic increments. The final step
+	// may be smaller than sv_mintic to land exactly on g_globalvars.time.
 	while (current_time < g_globalvars.time)
 	{
-		step_time = bound(0.01, min(step_time, (g_globalvars.time - current_time) - 0.01), 0.05);
-		
-		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
-		Physics_Bounce(step_time);
-		if (self->s.v.nextthink) { self->s.v.nextthink -= step_time; }
-		current_time += step_time;
+		float remaining = g_globalvars.time - current_time;
+		float dt = min(step_time, remaining);
+
+		antilag_lagmove_all_playeronly(owner, remaining);
+		Physics_Bounce(dt);
+		if (self->s.v.nextthink) { self->s.v.nextthink -= dt; }
+		current_time += dt;
 	}
-	//
 
 	self = oself;
 
 	// restore origins to held values
 	antilag_unmove_all();
+	SetLastRuntime(e);
 }
-
-
-
-
 
 
 
