@@ -222,6 +222,8 @@ enum
 	G_SETEXTFIELDPTR,
 	G_GETEXTFIELDPTR,
 	G_SETSENDNEEDED,
+	G_SPRAYCLEAR = G_EXTENSIONS_FIRST + 14,
+	G_SPRAYCLEARALL,
 	G_EXTENSIONS_LAST
 };
 extern qbool haveextensiontab[G_EXTENSIONS_LAST-G_EXTENSIONS_FIRST];
@@ -245,6 +247,11 @@ float g_random(void);
 float crandom(void);
 int i_rnd(int from, int to);
 float dist_random(float minValue, float maxValue, float spreadFactor);
+void KTX_SpraysClearAll(void);
+void KTX_SpraysClearPlayer(gedict_t *player);
+void KTX_SpraysForgetPlayer(gedict_t *player);
+qbool KTX_CanSpray(void);
+void KTX_SprayPlaced(int spray_id);
 float next_frame(void);
 gedict_t* spawn(void);
 void ent_remove(gedict_t *t);
@@ -911,6 +918,7 @@ void ra_break(void);
 // clan_arena.c
 
 qbool isCA(void);
+qbool CA_CanSpray(void);
 qbool CA_CheckAlive(gedict_t *p);
 int CA_wins_required(void);
 int CA_count_ready_players(void);

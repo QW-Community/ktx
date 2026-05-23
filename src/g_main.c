@@ -273,6 +273,11 @@ intptr_t VISIBILITY_VISIBLE vmMain(
 			ClearGlobals();
 			self = PROG_TO_EDICT(g_globalvars.self);
 			RemoveMOTD(); // remove MOTD entitys
+
+			// clear the bookkeeping but keep the disconnected player's sprays
+			// use KTX_SpraysClearPlayer() instead to clear sprays on disconnect
+			KTX_SpraysForgetPlayer(self);
+
 			s_lr_clear(self);
 			if (arg0)
 			{
@@ -434,6 +439,19 @@ intptr_t VISIBILITY_VISIBLE vmMain(
 		case GAME_CLEAR_EDICT:
 			// Don't ClearGlobals() as this will be called during spawn()
 			initialise_spawned_ent(PROG_TO_EDICT(g_globalvars.self));
+
+			return 0;
+
+		case GAME_CAN_SPRAY:
+			ClearGlobals();
+			self = PROG_TO_EDICT(g_globalvars.self);
+
+			return KTX_CanSpray();
+
+		case GAME_SPRAY_PLACED:
+			ClearGlobals();
+			self = PROG_TO_EDICT(g_globalvars.self);
+			KTX_SprayPlaced(arg0);
 
 			return 0;
 
@@ -671,6 +689,8 @@ static qbool G_InitExtensions(void)
 		{"SetExtFieldPtr",		G_SETEXTFIELDPTR},
 		{"GetExtFieldPtr",		G_GETEXTFIELDPTR},
 		{"setsendneeded",		G_SETSENDNEEDED},
+		{"sprayclear",			G_SPRAYCLEAR},
+		{"sprayclearall",		G_SPRAYCLEARALL},
 	};
 	int i;
 	for (i = 0; i < sizeof(exttraps)/sizeof(exttraps[0]); i++)

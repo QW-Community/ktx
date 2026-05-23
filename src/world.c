@@ -988,6 +988,7 @@ void FirstFrame(void)
 	RegisterCvarEx("k_clan_arena", "0");
 	RegisterCvarEx("k_clan_arena_rounds", "9");
 	RegisterCvarEx("k_clan_arena_max_respawns", "0");
+	RegisterCvarEx("k_player_spray_limit", "5");
 // }
 // { upplayers/upspecs
 	RegisterCvar("k_allowcountchange");

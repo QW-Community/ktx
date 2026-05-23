@@ -434,6 +434,16 @@ void trap_setpause(intptr_t pause)
 	syscall(G_SETPAUSE, pause);
 }
 
+intptr_t trap_SprayClear(intptr_t id)
+{
+	return syscall(G_SPRAYCLEAR, id);
+}
+
+intptr_t trap_SprayClearAll(void)
+{
+	return syscall(G_SPRAYCLEARALL);
+}
+
 intptr_t QVMstrftime(char *valbuff, intptr_t sizebuff, const char *fmt, intptr_t offset)
 {
 	return syscall(G_QVMstrftime, (intptr_t) valbuff, sizebuff, (intptr_t) fmt, offset);

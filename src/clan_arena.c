@@ -295,6 +295,8 @@ void SM_PrepareCA(void)
 		WO_InitializeSpawns(); // init wipeout spawns
 	}
 
+	KTX_SpraysClearAll();
+
 	team1_score = team2_score = 0;
 	round_num = 1;
 
@@ -334,6 +336,17 @@ int CA_wins_required(void)
 qbool isCA(void)
 {
 	return (isTeam() && cvar("k_clan_arena"));
+}
+
+qbool CA_CanSpray(void)
+{
+	// Allow sprays during prewar
+	if (!match_in_progress) {
+		return true;
+	}
+
+	// During match, sprays are only allowed between rounds
+	return ca_round_pause != 0;
 }
 
 // Used to determine value of ca_alive when PutClientInServer() is called

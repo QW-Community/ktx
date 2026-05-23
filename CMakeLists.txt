@@ -107,6 +107,7 @@ set(SRC_COMMON
 	"${DIR_SRC}/route_lookup.c"
 	"${DIR_SRC}/runes.c"
 	"${DIR_SRC}/server.c"
+	"${DIR_SRC}/sprays.c"
 	"${DIR_SRC}/sp_ai.c"
 	"${DIR_SRC}/sp_boss.c"
 	"${DIR_SRC}/sp_client.c"
