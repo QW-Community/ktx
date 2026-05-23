@@ -130,6 +130,8 @@ intptr_t trap_SetBotCMD(intptr_t edn, intptr_t msec, float angles_x, float angle
 						intptr_t impulse);
 
 void trap_setpause(intptr_t pause);
+intptr_t trap_SprayClear(intptr_t id);
+intptr_t trap_SprayClearAll(void);
 
 intptr_t QVMstrftime(char *valbuff, intptr_t sizebuff, const char *fmt, intptr_t offset);
 
