@@ -391,6 +391,10 @@ int get_votes_req(int fofs, qbool diff)
 	{
 		vt_req = max(2, vt_req); // at least 2 votes in this case
 	}
+	else if (fofs == OV_NOSPRAY)
+	{
+		vt_req = max(2, vt_req); // at least 2 votes in this case
+	}
 	else if (fofs == OV_COOP)
 	{
 		vt_req = max(1, vt_req); // at least 1 votes in this case
@@ -1162,6 +1166,76 @@ void teamoverlay(void)
 	vote_check_teamoverlay();
 }
 
+void vote_check_nospray(void)
+{
+	int veto;
+
+	if (match_in_progress || intermission_running || match_over)
+	{
+		return;
+	}
+
+	if (!get_votes(OV_NOSPRAY))
+	{
+		return;
+	}
+
+	veto = is_admins_vote(OV_NOSPRAY);
+
+	if (veto || !get_votes_req(OV_NOSPRAY, true))
+	{
+		vote_clear(OV_NOSPRAY);
+
+		cvar_fset("k_nospray", !cvar("k_nospray"));
+
+		if (veto)
+		{
+			G_bprint(2, "%s\n",
+						redtext(va("NoSpray mode %s by admin veto", OnOff(cvar("k_nospray")))));
+		}
+		else
+		{
+			G_bprint(2, "%s\n",
+						redtext(va("NoSpray mode %s by majority vote", OnOff(cvar("k_nospray")))));
+		}
+	}
+}
+
+void nospray(void)
+{
+	int votes;
+
+	if (match_in_progress)
+	{
+		G_sprint(self, 2, "%s mode %s\n", redtext("NoSpray"), OnOff(cvar("k_nospray")));
+
+		return;
+	}
+
+	if (!is_adm(self))
+	{
+		if ((CountPlayers() < 2) && !cvar("k_nospray"))
+		{
+			G_sprint(self, 2, "You need at least 2 players to do this.\n");
+
+			return;
+		}
+	}
+
+	self->v.nospray = !self->v.nospray;
+
+	G_bprint(
+			2,
+			"%s %s!%s\n",
+			self->netname,
+			(self->v.nospray ?
+					redtext(va("votes for nospray %s", OnOff(!cvar("k_nospray")))) :
+					redtext(va("withdraws %s nospray vote", g_his(self)))),
+			((votes = get_votes_req(OV_NOSPRAY, true)) ? va(" (%d)", votes) : ""));
+
+	vote_check_nospray();
+}
+
 qbool force_map_reset = false;
 
 // { votecoop
@@ -1725,6 +1799,7 @@ void vote_check_all(void)
 	vote_check_rpickup(MAX_RPICKUP_RECUSION);
 	vote_check_nospecs();
 	vote_check_teamoverlay();
+	vote_check_nospray();
 	vote_check_coop();
 	vote_check_antilag();
 	vote_check_privategame();
