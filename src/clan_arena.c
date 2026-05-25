@@ -338,6 +338,13 @@ qbool isCA(void)
 
 qbool CA_CanSpray(void)
 {
+	// Prewar uses the general KTX spray policy. CA's in_play and round-pause
+	// checks only apply once a match is active.
+	if (!match_in_progress)
+	{
+		return true;
+	}
+
 	// Players must be in play (not dead or unready)
 	if (!self->ca_ready || !self->in_play)
 	{
