@@ -785,6 +785,7 @@ void FirstFrame(void)
 	RegisterCvar("_k_nospecs");  // internal usage, will reject spectators connection
 
 	RegisterCvar("k_noitems");
+	RegisterCvarEx("k_nospray", "0");
 	RegisterCvarEx("k_pause_without_matchtag", "0");
 
 	RegisterCvar("k_random_maplist"); // select random map from k_ml_XXX variables.
@@ -938,6 +939,7 @@ void FirstFrame(void)
 	RegisterCvar("demo_skip_ktffa_record");
 	RegisterCvar("k_demoname_date"); // add date to demo name, value is argument for strftime() function
 	RegisterCvarEx("k_count", "10");
+	RegisterCvarEx("k_player_spray_limit", "2");
 	RegisterCvar("k_exclusive"); // stores whether players can join when a game is already in progress
 	RegisterCvarEx("k_countdown_message_head", "");
 	RegisterCvarEx("k_countdown_message_body", "");
@@ -988,7 +990,6 @@ void FirstFrame(void)
 	RegisterCvarEx("k_clan_arena", "0");
 	RegisterCvarEx("k_clan_arena_rounds", "9");
 	RegisterCvarEx("k_clan_arena_max_respawns", "0");
-	RegisterCvarEx("k_player_spray_limit", "5");
 // }
 // { upplayers/upspecs
 	RegisterCvar("k_allowcountchange");

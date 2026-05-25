@@ -132,6 +132,13 @@ qbool isRA(void)
 	return (isDuel() && cvar("k_rocketarena"));
 }
 
+qbool RA_CanSpray(void)
+{
+	// Queued RA players are waiting for the next fight and should not affect
+	// the current arena with sprays.
+	return !ra_isin_que(self);
+}
+
 qbool isWinner(gedict_t *p)
 {
 	return (p->ra_pt == raWinner);

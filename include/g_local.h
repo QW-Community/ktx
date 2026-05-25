@@ -861,6 +861,7 @@ void vote_check_all(void);
 #define OV_HOOKCRHOOK (VOTE_FOFS ( hookcrhook ) )
 #define OV_ANTILAG ( VOTE_FOFS ( antilag ) )
 #define OV_PRIVATE ( VOTE_FOFS ( privategame ) )
+#define OV_NOSPRAY ( VOTE_FOFS ( nospray ) )
 //#define OV_KICKUNAUTHED ( VOTE_FOFS (kick_unauthed) )
 #define OV_SWAPALL ( VOTE_FOFS ( swapall ) )
 #define MAX_RPICKUP_RECUSION 3
@@ -896,6 +897,7 @@ void ra_out_que(gedict_t *p);
 qbool ra_isin_que(gedict_t *p);
 int ra_pos_que(gedict_t *p);
 qbool isRA(void); // not game mode, but just modificator of duel
+qbool RA_CanSpray(void);
 qbool isWinner(gedict_t *p);
 qbool isLoser(gedict_t *p);
 gedict_t* getWinner(void);
