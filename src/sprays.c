@@ -73,6 +73,46 @@ static int KTX_SprayPlayerIndex(gedict_t *player)
 	return index;
 }
 
+static qbool KTX_SpraysForgetOldest(ktx_player_sprays_t *sprays)
+{
+	int i;
+
+	if (!sprays || sprays->count <= 0) {
+		return false;
+	}
+
+	if (!HAVEEXTENSION(G_SPRAYCLEAR) || !trap_SprayClear(sprays->ids[0])) {
+		return false;
+	}
+
+	for (i = 1; i < sprays->count; ++i) {
+		sprays->ids[i - 1] = sprays->ids[i];
+	}
+	--sprays->count;
+
+	return true;
+}
+
+static qbool KTX_SpraysMakeRoomForPlayer(gedict_t *player)
+{
+	ktx_player_sprays_t *sprays;
+	int index = KTX_SprayPlayerIndex(player);
+	int limit = KTX_SprayLimit();
+
+	if (index < 0 || limit <= 0) {
+		return false;
+	}
+
+	sprays = &ktx_player_sprays[index];
+	while (sprays->count >= limit) {
+		if (!KTX_SpraysForgetOldest(sprays)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void KTX_SpraysClearAll(void)
 {
 	memset(ktx_player_sprays, 0, sizeof(ktx_player_sprays));
@@ -118,8 +158,15 @@ void KTX_SpraysForgetPlayer(gedict_t *player)
 
 qbool KTX_CanSpray(void)
 {
+	qbool allowed = true;
+
 	// Reject invalid entities and spectators.
 	if (KTX_SprayPlayerIndex(self) < 0 || self->ct != ctPlayer) {
+		return false;
+	}
+
+	// A zero or negative limit disables sprays.
+	if (KTX_SprayLimit() <= 0) {
 		return false;
 	}
 
@@ -145,14 +192,23 @@ qbool KTX_CanSpray(void)
 
 	// CA/Wipeout decides its own in-match spray policy.
 	if (isCA()) {
-		return CA_CanSpray();
+		allowed = CA_CanSpray();
+	}
+	else if (isRA()) {
+		// RA decides its own in-match spray policy.
+		allowed = RA_CanSpray();
 	}
 
-	// RA decides its own in-match spray policy.
-	if (isRA()) {
-		return RA_CanSpray();
+	if (!allowed) {
+		return false;
 	}
 
+	// Free this player's own oldest spray before MVDSV allocates the next
+	// global slot, so one player cannot force global eviction of others' sprays.
+	if (!KTX_SpraysMakeRoomForPlayer(self)) {
+		return false;
+	}
+	
 	return true;
 }
 
@@ -161,7 +217,6 @@ void KTX_SprayPlaced(int spray_id)
 	ktx_player_sprays_t *sprays;
 	int index = KTX_SprayPlayerIndex(self);
 	int limit = KTX_SprayLimit();
-	int i;
 
 	if (index < 0 || spray_id <= 0) {
 		return;
@@ -176,14 +231,12 @@ void KTX_SprayPlaced(int spray_id)
 	}
 
 	while (sprays->count >= limit) {
-		if (HAVEEXTENSION(G_SPRAYCLEAR)) {
-			trap_SprayClear(sprays->ids[0]);
+		if (!KTX_SpraysForgetOldest(sprays)) {
+			if (HAVEEXTENSION(G_SPRAYCLEAR)) {
+				trap_SprayClear(spray_id);
+			}
+			return;
 		}
-
-		for (i = 1; i < sprays->count; ++i) {
-			sprays->ids[i - 1] = sprays->ids[i];
-		}
-		--sprays->count;
 	}
 
 	sprays->ids[sprays->count++] = spray_id;
